@@ -1,0 +1,72 @@
+-----------------------------------------
+Section: Products Data:
+Loading the raw data with a few modifications like replacing blank values with null, defining a custom order for cluster_id and hierarchy_1.
+-----------------------------------------
+set NullInterpret ='';
+
+cluster_id_Order:
+MAPPING LOAD * Inline
+[cluster_id, Value
+cluster_0, 1
+cluster_1, 2
+cluster_2, 3
+cluster_3, 4
+cluster_4, 5
+cluster_5, 6
+cluster_6, 7
+cluster_7, 8
+cluster_8, 9
+cluster_9, 10];
+
+hierarchy1_id_Order:
+MAPPING LOAD * Inline
+[hierarchy1_id, Value
+H00, 1
+H01, 2
+H02, 3
+H03, 4];
+
+ProductData:
+LOAD
+    product_id,
+    product_length,
+    product_depth,
+    product_width,
+    dual(cluster_id,APPLYMAP('cluster_id_Order', cluster_id)) as cluster_id,
+    dual(hierarchy1_id, ApplyMap('hierarchy1_id_Order',hierarchy1_id)) as hierarchy1_id,
+    hierarchy2_id,
+    hierarchy3_id,
+    hierarchy4_id,
+    hierarchy5_id
+FROM [lib://DataFiles/product_hierarchy.csv]
+(txt, codepage is 28591, embedded labels, delimiter is ',', msq);
+
+------------------------------------
+Section: Product Data for Analysis:
+Loading product_ids that have blank (null) cluster_id in 'A'
+Then making an outer join with product_ids that have non-blank(non-null) value for cluster_id.
+Commented out Drop statement and a few others that were used earlier, while playing around with script for learning purpose.
+-----------------------------------
+
+//Null_Cluster_Products:
+A:
+LOAD
+   product_id AS product_id_1,// AS n_product_id,
+   cluster_id AS n_cluster_id,
+   hierarchy1_id AS n_hierarchy1_id,
+   hierarchy5_id AS n_hierarchy5_id
+Resident ProductData
+WHERE IsNull(cluster_id);
+
+//NonNull_Cluster_Products:
+Outer Join(A)
+LOAD
+    product_id AS product_id_1,// AS nn_product_id,
+    cluster_id AS nn_cluster_id,
+    hierarchy1_id AS nn_hierarchy1_id,
+    hierarchy5_id AS nn_hierarchy5_id
+Resident ProductData
+WHERE not IsNull(cluster_id);
+
+
+//Drop Table ProductData;
